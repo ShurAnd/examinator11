@@ -1,5 +1,4 @@
 from tkinter import *
-from tkinter import ttk
 
 class Question:
     def __init__(self,
@@ -8,10 +7,10 @@ class Question:
                  question_text: str,
                  text_answer: str,
                  variants: list[str],
-                 right_variant: int):
+                 right_variants: list[bool]):
         self.identifier = identifier
         self.variants = variants
-        self.right_variant = right_variant
+        self.right_variants = right_variants
         self.is_text = is_text
         self.question_text = question_text
         self.text_answer = text_answer
@@ -23,7 +22,7 @@ def load_questions():
         "Назовите правильный вариант: ",
         "",
         variants=["Варинат 1", "Вариант 2", "Вариант 3", "Вариант 4"],
-        right_variant=4
+        right_variants=[False, False, True, False]
     )
 
     q2 = Question(
@@ -32,7 +31,7 @@ def load_questions():
         "Человек называется _______",
         "Ты",
         variants=[],
-        right_variant=0
+        right_variants=[]
     )
 
     return [q1, q2]
@@ -47,6 +46,7 @@ class QuizApp:
     check_button: Button
     result_label: Label
     text_answer: Entry
+    check_variants: list[BooleanVar]
     def __init__(self, rt):
         self.root = rt
         self.questions = load_questions()  # Загружаем все вопросы
@@ -98,12 +98,12 @@ class QuizApp:
         choices_frame.pack(anchor="w", padx=20, pady=5)
 
         # Создаем варианты с галочками (Checkbutton)
-        choice_vars = []
+        self.check_variants = []
         choice_count = len(q.variants)
         for i in range(choice_count):
-            choice_vars.append(BooleanVar())
+            self.check_variants.append(BooleanVar())
             (Checkbutton(choices_frame, text=q.variants[i],
-                         variable=choice_vars[i], bg="white")
+                         variable=self.check_variants[i], bg="white")
              .grid(row=i, column=0, padx=10, sticky="w"))
 
     def create_text_gap_row(self, q: Question):
@@ -155,19 +155,24 @@ class QuizApp:
 
         # Получаем ответ пользователя в зависимости от типа вопроса
         if not question.is_text:
-            # user_answer = self.selected_answer.get()
-            print("Заглушка для проверки чек боксов")
+            user_answer = []
+            for i, val in enumerate(self.check_variants):
+                user_answer.append(self.check_variants[i].get())
         else:
             user_answer = self.text_answer.get().strip()
 
+        print(user_answer)
         # Проверяем правильность (здесь ваша логика проверки)
         is_correct = self.is_answer_correct(question, user_answer)
 
         # Показываем результат
         if is_correct:
             self.result_label.config(text="✅ Правильно!", fg="green")
-        else:
+        elif not is_correct and question.is_text:
             self.result_label.config(text=f"❌ Неправильно. Правильный ответ: {question.text_answer}",
+                                     fg="red")
+        else:
+            self.result_label.config(text=f"❌ Неправильно. Правильный ответ: {question.right_variants}",
                                      fg="red")
 
         # Переходим к следующему вопросу через небольшую задержку
@@ -181,10 +186,8 @@ class QuizApp:
 
     def is_answer_correct(self, question, user_answer):
         """Проверяет правильность ответа (реализуйте свою логику)"""
-        # Здесь должна быть ваша логика проверки
-        # Например:
         if not question.is_text:
-            return user_answer == question.text_answer
+            return user_answer == question.right_variants
         else:
             return user_answer.lower() == question.text_answer.lower()
 
