@@ -1,4 +1,5 @@
 from tkinter import *
+from docx import Document
 
 class Question:
     def __init__(self,
@@ -40,6 +41,36 @@ def load_questions():
 #root.grid_columnconfigure(0, weight=1)  # Первый столбец + второй (объединенный)
 #root.grid_columnconfigure(1, weight=0)  # Второй столбец (не используется отдельно)
 
+
+def process_docx_with_questions():
+    num_text_questions = 0
+    num_var_questions = 0
+    document = Document("questions.docx")
+    table = document.tables[0]
+    # Перебираем все строки таблицы
+    for row_idx, row in enumerate(table.rows):
+        # Перебираем все ячейки в строке
+        for cell_idx, cell in enumerate(row.cells):
+            # В ячейке может быть несколько абзацев
+            cell_text = cell.text.strip()
+            if cell_text:
+                if "Ответ:" in cell_text or "ответ:" in cell_text:
+                    num_text_questions += 1
+                    print("\n Вопрос с текстовым ответом")
+                else:
+                    num_var_questions += 1
+                    print("\n Вопрос с вариантом ответов")
+    print("С текстом: " + str(num_text_questions) + "\n")
+    print("С вариантом: " + str(num_var_questions) + "\n")
+
+def numbers_of_right_vars(right_variants: list[bool]) -> str:
+    res = "Правильные варианты: "
+    for variant in right_variants:
+        if variant:
+            res += str(right_variants.index(variant) + 1) + " "
+    return res
+
+
 class QuizApp:
     question_frame: Frame
     button_frame: Frame
@@ -74,7 +105,7 @@ class QuizApp:
 
     def create_header_row(self):
         """Создает информативную строку с заголовками"""
-        header = Label(root, text="Задание", font=("Arial", 12, "bold"),
+        header = Label(root, text="За каждые 10 правильных ответов разрешается кружка пива.", font=("Arial", 12, "bold"),
                         bg="lightgray", padx=10, pady=5)
         header.grid(row=0, column=0, columnspan=2, sticky="ew", padx=1, pady=1)
 
@@ -286,7 +317,7 @@ class QuizApp:
             self.result_label.config(text=f"❌ Неправильно. Правильный ответ: {question.text_answer}",
                                      fg="red")
         else:
-            self.result_label.config(text=f"❌ Неправильно. Правильный ответ: {question.right_variants}",
+            self.result_label.config(text=f"❌ Неправильно. Правильный ответ: {numbers_of_right_vars(question.right_variants)}",
                                      fg="red")
 
         # Переходим к следующему вопросу через небольшую задержку
@@ -320,4 +351,5 @@ root = Tk()
 root.title("Examinator11")
 root.geometry("500x500")
 app = QuizApp(root)
+process_docx_with_questions()
 root.mainloop()
