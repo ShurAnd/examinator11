@@ -16,35 +16,29 @@ class Question:
         self.question_text = question_text
         self.text_answer = text_answer
 
-def load_questions():
-    q1 = Question(
-        1,
-        False,
-        "Назовите правильный вариант: ",
-        "",
-        variants=["Варинат 1", "Вариант 2", "Вариант 3", "Вариант 4"],
-        right_variants=[False, False, True, False]
-    )
-
-    q2 = Question(
-        2,
-        True,
-        "Человек называется _______",
-        "Ты",
-        variants=[],
-        right_variants=[]
-    )
-
-    return [q1, q2]
-
 # Настройка весов для столбцов
 #root.grid_columnconfigure(0, weight=1)  # Первый столбец + второй (объединенный)
 #root.grid_columnconfigure(1, weight=0)  # Второй столбец (не используется отдельно)
 
 
-def process_docx_with_questions():
-    num_text_questions = 0
-    num_var_questions = 0
+def create_text_question(id: int, cell_text: str) -> Question:
+    if "(Ответ" in cell_text:
+        strs = cell_text.split("(Ответ:")
+        if strs[1].endswith(")"):
+            strs[1] = strs[1][:-1]
+        return Question(id, True, strs[0], strs[1], None, None)
+    elif "(ответ" in cell_text:
+        strs = cell_text.split("(ответ:")
+        if strs[1].endswith(")"):
+            strs[1] = strs[1][:-1]
+        return Question(id, True, strs[0], strs[1], None, None)
+    else:
+        return None
+def create_var_question(id: int, cell_text: str) -> Question:
+    return Question(-1, False, "", "", [""], [False])
+
+
+def process_docx_with_questions(ques: list[Question]):
     document = Document("questions.docx")
     table = document.tables[0]
     # Перебираем все строки таблицы
@@ -55,13 +49,9 @@ def process_docx_with_questions():
             cell_text = cell.text.strip()
             if cell_text:
                 if "Ответ:" in cell_text or "ответ:" in cell_text:
-                    num_text_questions += 1
-                    print("\n Вопрос с текстовым ответом")
+                    ques.append(create_text_question(row_idx, cell_text))
                 else:
-                    num_var_questions += 1
-                    print("\n Вопрос с вариантом ответов")
-    print("С текстом: " + str(num_text_questions) + "\n")
-    print("С вариантом: " + str(num_var_questions) + "\n")
+                    ques.append(create_var_question(row_idx, cell_text))
 
 def numbers_of_right_vars(right_variants: list[bool]) -> str:
     res = "Правильные варианты: "
@@ -81,9 +71,11 @@ class QuizApp:
     check_variants: list[BooleanVar]
     nav_entry: Entry
 
-    def __init__(self, rt):
+    def __init__(self,
+                 rt,
+                 questions):
         self.root = rt
-        self.questions = load_questions()  # Загружаем все вопросы
+        self.questions = questions  # Загружаем все вопросы
         self.current_index = 0  # Индекс текущего вопроса
         self.current_frame = None  # Фрейм для текущего вопроса
 
@@ -347,9 +339,10 @@ class QuizApp:
         else:
             return user_answer.lower() == question.text_answer.lower()
 
+questions = list[Question]
+process_docx_with_questions(questions)
 root = Tk()
 root.title("Examinator11")
 root.geometry("500x500")
-app = QuizApp(root)
-process_docx_with_questions()
+app = QuizApp(root, questions)
 root.mainloop()
